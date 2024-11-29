@@ -17,8 +17,46 @@
 #include "modules/WiFi/WiFiManager.h"
 #include "modules/BLE/BLEManager.h"
 
+// Wi-Fi credentials
+const char* ssid = "Your_SSID";
+const char* password = "Your_PASSWORD";
+
+// Instantiate managers
 WiFiManager wifiManager;
 BLEManager bleManager;
+
+void setup() {
+    Serial.begin(115200);
+
+    // Initialize Wi-Fi
+    wifiManager.init(ssid, password);
+    wifiManager.scanNetworks();
+    if (wifiManager.connectToNetwork(ssid, password)) {
+        Serial.println("Wi-Fi connected!");
+        Serial.println("Local IP: " + wifiManager.getLocalIP());
+    } else {
+        Serial.println("Failed to connect to Wi-Fi.");
+    }
+
+    // Initialize BLE
+    bleManager.init("ESP32_BLE");
+    bleManager.startAdvertising();
+}
+
+void loop() {
+    static unsigned long lastWiFiScan = 0;
+    if (millis() - lastWiFiScan > 10000) {
+        wifiManager.scanNetworks();
+        lastWiFiScan = millis();
+    }
+
+    static unsigned long lastBLEScan = 0;
+    if (millis() - lastBLEScan > 15000) {
+        bleManager.scanDevices();
+        lastBLEScan = millis();
+    }
+}
+
 
 SDcard& SD_CARD = SDcard::getInstance();
 
@@ -66,17 +104,6 @@ void setup() {
     // Scan for BLE devices
     Serial.println("Scanning for BLE devices:");
     bleManager.
-
-
-void loop() {
-    // Existing loop code...
-
-    // Periodic Wi-Fi scan
-    static unsigned long lastWiFiScan = 0;
-    if (millis() - lastWiFiScan > 10000) { // Every 10 seconds
-        Serial.println("Rescanning Wi-Fi networks:");
-        wifiManager.scanNetworks();
-        lastWiFiScan = millis();
 
     gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
     gpio_install_isr_service(0);
@@ -280,5 +307,7 @@ void my_touchpad_read(lv_indev_t * indev_driver, lv_indev_data_t * data) {
      lv_indev_set_read_cb(indev, my_touchpad_read);    
      Serial.println(F("Touch registered."));
  }
+
+ 
 
 
