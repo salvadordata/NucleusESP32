@@ -14,50 +14,6 @@
 #include "lv_fs_if.h"
 #include "modules/dataProcessing/SubGHzParser.h"
 
-#include "modules/WiFi/WiFiManager.h"
-#include "modules/BLE/BLEManager.h"
-
-// Wi-Fi credentials
-const char* ssid = "Your_SSID";
-const char* password = "Your_PASSWORD";
-
-// Instantiate managers
-WiFiManager wifiManager;
-BLEManager bleManager;
-
-void setup() {
-    Serial.begin(115200);
-
-    // Initialize Wi-Fi
-    wifiManager.init(ssid, password);
-    wifiManager.scanNetworks();
-    if (wifiManager.connectToNetwork(ssid, password)) {
-        Serial.println("Wi-Fi connected!");
-        Serial.println("Local IP: " + wifiManager.getLocalIP());
-    } else {
-        Serial.println("Failed to connect to Wi-Fi.");
-    }
-
-    // Initialize BLE
-    bleManager.init("ESP32_BLE");
-    bleManager.startAdvertising();
-}
-
-void loop() {
-    static unsigned long lastWiFiScan = 0;
-    if (millis() - lastWiFiScan > 10000) {
-        wifiManager.scanNetworks();
-        lastWiFiScan = millis();
-    }
-
-    static unsigned long lastBLEScan = 0;
-    if (millis() - lastBLEScan > 15000) {
-        bleManager.scanDevices();
-        lastBLEScan = millis();
-    }
-}
-
-
 SDcard& SD_CARD = SDcard::getInstance();
 
 SoftSpiDriver<SDCARD_MISO_PIN, SDCARD_MOSI_PIN, SDCARD_SCK_PIN> softSpiLCD;
@@ -92,19 +48,7 @@ void init_touch(TouchCallback singleTouchCallback) {
 
 void setup() {
   Serial.begin(115200);
-  // Wait for USB void setup() 
-    // Initialize Wi-Fi and BLE managers
-    wifiManager.init();
-    bleManager.init();
-
-    // Scan for Wi-Fi networks
-    Serial.println("Scanning for Wi-Fi networks:");
-    wifiManager.scanNetworks();
-
-    // Scan for BLE devices
-    Serial.println("Scanning for BLE devices:");
-    bleManager.
-
+  // Wait for USB Serial
     gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
     gpio_install_isr_service(0);
 
@@ -157,7 +101,6 @@ void loop() {
   delay(1); 
  
      if(C1101CurrentState == STATE_ANALYZER) {
-      //   CC1101.fskAnalyze();
              if (CC1101.CheckReceived())
              {
                 delay(5);
@@ -307,7 +250,4 @@ void my_touchpad_read(lv_indev_t * indev_driver, lv_indev_data_t * data) {
      lv_indev_set_read_cb(indev, my_touchpad_read);    
      Serial.println(F("Touch registered."));
  }
-
- 
-
 
