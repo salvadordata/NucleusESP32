@@ -14,6 +14,12 @@
 #include "lv_fs_if.h"
 #include "modules/dataProcessing/SubGHzParser.h"
 
+#include "modules/WiFi/WiFiManager.h"
+#include "modules/BLE/BLEManager.h"
+
+WiFiManager wifiManager;
+BLEManager bleManager;
+
 SDcard& SD_CARD = SDcard::getInstance();
 
 SoftSpiDriver<SDCARD_MISO_PIN, SDCARD_MOSI_PIN, SDCARD_SCK_PIN> softSpiLCD;
@@ -48,7 +54,30 @@ void init_touch(TouchCallback singleTouchCallback) {
 
 void setup() {
   Serial.begin(115200);
-  // Wait for USB Serial
+  // Wait for USB void setup() 
+    // Initialize Wi-Fi and BLE managers
+    wifiManager.init();
+    bleManager.init();
+
+    // Scan for Wi-Fi networks
+    Serial.println("Scanning for Wi-Fi networks:");
+    wifiManager.scanNetworks();
+
+    // Scan for BLE devices
+    Serial.println("Scanning for BLE devices:");
+    bleManager.
+
+
+void loop() {
+    // Existing loop code...
+
+    // Periodic Wi-Fi scan
+    static unsigned long lastWiFiScan = 0;
+    if (millis() - lastWiFiScan > 10000) { // Every 10 seconds
+        Serial.println("Rescanning Wi-Fi networks:");
+        wifiManager.scanNetworks();
+        lastWiFiScan = millis();
+
     gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
     gpio_install_isr_service(0);
 
