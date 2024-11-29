@@ -14,6 +14,11 @@
 #include "lv_fs_if.h"
 #include "modules/dataProcessing/SubGHzParser.h"
 
+#include "modules/BLE/BLEspam_with_password.h" // Include the new BLE spam module
+
+#define STATE_BT_SPAM_PASSWORD 99 // New state for BLE spam with password
+
+
 SDcard& SD_CARD = SDcard::getInstance();
 
 SoftSpiDriver<SDCARD_MISO_PIN, SDCARD_MOSI_PIN, SDCARD_SCK_PIN> softSpiLCD;
@@ -97,6 +102,14 @@ void loop() {
    lv_tick_inc(now - lv_last_tick);
    lv_last_tick = now;
    lv_timer_handler();
+ 
+ if (Serial.available()) {
+    String command = Serial.readString();
+    if (command == "BLE_SPAM_PASSWORD") {
+        BTCurrentState = STATE_BT_SPAM_PASSWORD;
+    }
+}
+
 
   delay(1); 
  
@@ -111,7 +124,19 @@ void loop() {
              }
              delay(1);
      }
-      if(C1101CurrentState == STATE_RCSWITCH) 
+ if (BTCurrentState == STATE_BT_SPAM_PASSWORD) {
+    // NEW FUNCTIONALITY: BLE spam with password handling
+    BLESpamWithPassword bleSpam;
+    int spamChoice = 4;          // Tutti-frutti spam mode
+    String password = "MySecret"; // Example password (replace with actual logic)
+
+    // Perform spam with password handling
+    bleSpam.aj_adv_with_password(spamChoice, password);
+
+    // Reset state after execution
+    BTCurrentState = STATE_IDLE;
+}
+  if(C1101CurrentState == STATE_RCSWITCH) 
  {
      RCSwitch mySwitch = CC1101.getRCSwitch();
      if (mySwitch.available())
