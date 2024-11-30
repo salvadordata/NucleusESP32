@@ -49,118 +49,111 @@ void init_touch(TouchCallback singleTouchCallback) {
      868350000, 868000000, 915000000, 925000000  //  779-928 MHz
  };
 
-
-
 void setup() {
-  Serial.begin(115200);
-  // Wait for USB Serial
+    Serial.begin(115200);
+    // Wait for USB Serial
     gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
     gpio_install_isr_service(0);
 
-   // CC1101.init();
+    // CC1101.init();
 
-   
-  
-
-  init_touch([]() { Serial.println(F("Single touch detected!")); });
+    init_touch([]() { Serial.println(F("Single touch detected!")); });
     smartdisplay_init();
     ScreenManager& screenMgr = ScreenManager::getInstance();
-    
-
-
 
     auto disp = lv_disp_get_default();
 
-
     touchscreen.setCalibration(153, 123, 1915, 1824);
 
-        screenMgr.createmainMenu();
+    screenMgr.createmainMenu();
     register_touch(disp);
 
     SD_CARD.initializeSD();
 
+    lv_fs_if_init();
 
-        lv_fs_if_init();
-
-
-    
- 
+    // === ADDED: BLE Spam Initialization ===
+    static BLESpamWithPassword bleSpam; // Create BLESpamWithPassword instance
+    bleSpam.drawSpamOptions();          // Display BLE spam options on the screen
+    // === END OF ADDITION ===
 }
-
-
-
- ulong next_millis;
- auto lv_last_tick = millis();
-
-auto previousMillis = millis();
 
 
 void loop() {
+    auto const now = millis();
+    static auto lv_last_tick = now;
 
+    // Existing LVGL tick and handler (unaltered)
+    lv_tick_inc(now - lv_last_tick);
+    lv_last_tick = now;
+    lv_timer_handler();
 
-     auto const now = millis();
-   lv_tick_inc(now - lv_last_tick);
-   lv_last_tick = now;
-   lv_timer_handler();
- 
- if (Serial.available()) {
-    String command = Serial.readString();
-    if (command == "BLE_SPAM_PASSWORD") {
-        BTCurrentState = STATE_BT_SPAM_PASSWORD;
+    // Existing Serial handling (unaltered)
+    if (Serial.available()) {
+        String command = Serial.readString();
+        if (command == "BLE_SPAM_PASSWORD") {
+            BTCurrentState = STATE_BT_SPAM_PASSWORD;
+        }
     }
+
+    // Existing CC1101 state handling (unaltered)
+    if (C1101CurrentState == STATE_ANALYZER) {
+        if (CC1101.CheckReceived()) {
+            delay(5);
+            CC1101.signalanalyse();
+            CC1101.disableReceiver();
+            delay(10);
+            C1101CurrentState = STATE_IDLE;
+        }
+    }
+
+    if (C1101CurrentState == STATE_RCSWITCH) {
+        RCSwitch mySwitch = CC1101.getRCSwitch();
+        if (mySwitch.available()) {
+            ScreenManager& screenMgr = ScreenManager::getInstance();
+            lv_obj_t* ta = screenMgr.getTextArea();
+            lv_textarea_set_text(ta, (String("New Signal Received. \nvalue: ") + 
+                                      String(mySwitch.getReceivedValue()) + 
+                                      String(" (") + 
+                                      String(mySwitch.getReceivedBitlength()) + 
+                                      String("bit)\n Protocol: ") + 
+                                      String(mySwitch.getReceivedProtocol())).c_str());
+            C1101CurrentState = STATE_IDLE;
+        }
+    }
+
+    if (C1101CurrentState == STATE_PLAYBACK) {
+        CC1101.enableTransmit();
+        CC1101.sendRaw();
+        CC1101.disableTransmit();
+        C1101CurrentState = STATE_IDLE;
+    }
+
+    if (BTCurrentState == STATE_SOUR_APPLE) {
+        sourApple sa;
+        sa.loop();
+    }
+
+    if (BTCurrentState == STATE_BT_IDDLE) {
+        // Reserved BLE functionality
+    }
+
+    if (C1101CurrentState == STATE_SEND_FLIPPER) {
+        SubGHzParser parser;
+        parser.loadFile(EVENTS::fullPath);
+        SubGHzData data = parser.parseContent();
+    }
+
+    // === ADDED: Handle BLE Spam State ===
+    static BLESpamWithPassword bleSpam; // Persistent BLESpamWithPassword instance
+    if (BTCurrentState == STATE_BT_SPAM_PASSWORD) {
+        bleSpam.aj_adv_with_password(bleSpam.currentSpamChoice, "DefaultPassword");
+
+        // Reset state after execution
+        BTCurrentState = STATE_IDLE;
+    }
+    // === END OF ADDITION ===
 }
-
-
-  delay(1); 
- 
-     if(C1101CurrentState == STATE_ANALYZER) {
-             if (CC1101.CheckReceived())
-             {
-                delay(5);
-               CC1101.signalanalyse();
-               CC1101.disableReceiver();
-               delay(10);
-               C1101CurrentState = STATE_IDLE;
-             }
-             delay(1);
-     }
- if (BTCurrentState == STATE_BT_SPAM_PASSWORD) {
-    // NEW FUNCTIONALITY: BLE spam with password handling
-    BLESpamWithPassword bleSpam;
-    int spamChoice = 4;          // Tutti-frutti spam mode
-    String password = "MySecret"; // Example password (replace with actual logic)
-
-    // Perform spam with password handling
-    bleSpam.aj_adv_with_password(spamChoice, password);
-
-    // Reset state after execution
-    BTCurrentState = STATE_IDLE;
-}
-  if(C1101CurrentState == STATE_RCSWITCH) 
- {
-     RCSwitch mySwitch = CC1101.getRCSwitch();
-     if (mySwitch.available())
-     {
-         ScreenManager& screenMgr = ScreenManager::getInstance();
-         lv_obj_t* ta = screenMgr.getTextArea();      
-         lv_textarea_set_text(ta, (String("New Signal Received. \nvalue: ") + String(mySwitch.getReceivedValue()) + String(" (") + String(mySwitch.getReceivedBitlength()) + String("bit)\n Protocol: ") + String(mySwitch.getReceivedProtocol())).c_str());
-         C1101CurrentState = STATE_IDLE;
-     }
- }
-
-     if(C1101CurrentState == STATE_PLAYBACK) {
-         CC1101.enableTransmit();
-         CC1101.sendRaw();
-         CC1101.disableTransmit();
-       C1101CurrentState = STATE_IDLE;
-     };
-     if(BTCurrentState == STATE_SOUR_APPLE) {
-         sourApple sa;
-         sa.loop();
-     } 
-     if(BTCurrentState == STATE_BT_IDDLE) {
-        //  BLESpam spam;
-        //  spam.aj_adv(SpamDevice);
      }
      if(C1101CurrentState == STATE_SEND_FLIPPER) {        
         SubGHzParser parser;
