@@ -51,25 +51,24 @@ void init_touch(TouchCallback singleTouchCallback) {
 
 void setup() {
     Serial.begin(115200);
-    // Wait for USB Serial
+    // USB CYD Initialization
     gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
     gpio_install_isr_service(0);
 
-    // CC1101.init();
-
     init_touch([]() { Serial.println(F("Single touch detected!")); });
     smartdisplay_init();
-    ScreenManager& screenMgr = ScreenManager::getInstance();
-
     auto disp = lv_disp_get_default();
 
+#ifdef CYDV2
     touchscreen.setCalibration(153, 123, 1915, 1824);
+#endif
+#ifdef CYDV3
+    touchscreen.setCalibration(178, 92, 1793, 1830);
+#endif
 
-    screenMgr.createmainMenu();
+    screenMgrM.createmainMenu();
     register_touch(disp);
-
     SD_CARD.initializeSD();
-
     lv_fs_if_init();
 
     // === ADDED: BLE Spam Initialization ===
